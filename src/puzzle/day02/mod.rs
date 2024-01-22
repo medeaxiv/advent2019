@@ -1,5 +1,7 @@
 use itertools::Itertools;
 
+use super::intcode::Intcode;
+
 pub const INPUT_FILE: &str = "inputs/day02/input.txt";
 
 pub fn part1(input: &str) -> impl std::fmt::Display {
@@ -10,7 +12,7 @@ fn solve_part1(input: &str) -> i64 {
     let mut program = parse(input);
     program[1] = 12;
     program[2] = 2;
-    run(&mut program)
+    run(&program)
 }
 
 pub fn part2(input: &str) -> impl std::fmt::Display {
@@ -26,7 +28,7 @@ fn solve_part2(input: &str) -> i64 {
             let mut program = original_program.clone();
             program[1] = a;
             program[2] = b;
-            let result = run(&mut program);
+            let result = run(&program);
             result == 19690720
         })
         .expect("Values not found");
@@ -45,34 +47,17 @@ fn parse(input: &str) -> Vec<i64> {
         .collect_vec()
 }
 
-fn run(program: &mut [i64]) -> i64 {
-    let mut ip = 0;
-    loop {
-        let opcode = program[ip];
-        let value = match opcode {
-            1 => {
-                let a = program[program[ip + 1] as usize];
-                let b = program[program[ip + 2] as usize];
-                a + b
-            }
-            2 => {
-                let a = program[program[ip + 1] as usize];
-                let b = program[program[ip + 2] as usize];
-                a * b
-            }
-            99 => {
-                break;
-            }
-            _ => panic!("unexpected opcode {opcode:0.2x}"),
-        };
+fn run(program: &[i64]) -> i64 {
+    let mut machine = Intcode::new(program);
+    let result = machine.run();
 
-        let address = program[ip + 3] as usize;
-        tracing::debug!(value, address, "storing value");
-        program[address] = value;
-        ip += 4;
+    match result {
+        Ok(_) => machine.get_program()[0],
+        Err(err) => {
+            tracing::error!(error = %err, "Error while executing intcode program");
+            0
+        }
     }
-
-    program[0]
 }
 
 #[cfg(test)]
@@ -90,8 +75,8 @@ mod tests {
     fn test_part1(#[case] which: usize, #[case] expected: i64) {
         crate::util::test::setup_tracing();
         let input = input(which);
-        let mut program = parse(&input);
-        let result = run(&mut program);
+        let program = parse(&input);
+        let result = run(&program);
         assert_eq!(result, expected);
     }
 }

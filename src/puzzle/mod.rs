@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::{benchmark::RuntimeStats, AocError};
 
+mod intcode;
 pub mod template;
 
 pub mod day01;
