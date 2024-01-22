@@ -77,6 +77,12 @@ fn main() -> anyhow::Result<()> {
             measure(puzzle::day04::part1, rounds),
             measure(puzzle::day04::part2, rounds),
         ),
+        Puzzle::new(
+            5,
+            puzzle::day05::INPUT_FILE,
+            measure(puzzle::day05::part1, rounds),
+            measure(puzzle::day05::part2, rounds),
+        ),
     ];
 
     let start = Instant::now();

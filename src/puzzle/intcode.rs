@@ -1,15 +1,45 @@
+use std::collections::VecDeque;
+
 #[derive(Debug, Clone)]
 pub struct Intcode {
+    state: State,
     ip: usize,
     program: Box<[i64]>,
+    input_buffer: VecDeque<i64>,
+    output_buffer: VecDeque<i64>,
+}
+
+impl Intcode {
+    pub fn run_program_with_inputs(
+        program: impl AsRef<[i64]>,
+        inputs: impl IntoIterator<Item = i64>,
+    ) -> Result<Vec<i64>, Error> {
+        let mut machine = Self::new(program);
+        machine.input_buffer.extend(inputs);
+        machine.run()?;
+        Ok(Vec::from_iter(machine.output_buffer.drain(..)))
+    }
 }
 
 impl Intcode {
     pub fn new(program: impl AsRef<[i64]>) -> Self {
         Self {
+            state: State::Initial,
             ip: 0,
             program: Box::from(program.as_ref()),
+            input_buffer: VecDeque::new(),
+            output_buffer: VecDeque::new(),
         }
+    }
+
+    pub fn push_input(&mut self, input: i64) {
+        #![allow(dead_code)]
+        self.input_buffer.push_back(input);
+    }
+
+    pub fn pop_output(&mut self) -> Option<i64> {
+        #![allow(dead_code)]
+        self.output_buffer.pop_front()
     }
 
     pub fn step(&mut self) -> Result<State, Error> {
@@ -17,18 +47,88 @@ impl Intcode {
         let instruction = Instruction::decode(self.ip, instruction)?;
         match instruction.opcode {
             1 => {
-                let a = self.address(instruction.parameter_modes[2], self.ip + 1)?;
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
                 let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
                 let c = self.read(self.ip + 3)? as usize;
                 self.write(c, a + b)?;
+
                 self.ip += 4;
                 Ok(State::Running)
             }
             2 => {
-                let a = self.address(instruction.parameter_modes[2], self.ip + 1)?;
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
                 let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
                 let c = self.read(self.ip + 3)? as usize;
                 self.write(c, a * b)?;
+
+                self.ip += 4;
+                Ok(State::Running)
+            }
+            3 => {
+                let Some(input) = self.input_buffer.pop_front() else {
+                    return Ok(State::WaitingForInput);
+                };
+
+                let a = self.read(self.ip + 1)? as usize;
+                self.write(a, input)?;
+
+                self.ip += 2;
+                Ok(State::Running)
+            }
+            4 => {
+                let output = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                self.output_buffer.push_back(output);
+
+                self.ip += 2;
+                Ok(State::Running)
+            }
+            5 => {
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                let b = self.address(instruction.parameter_modes[1], self.ip + 2)? as usize;
+
+                if a != 0 {
+                    self.ip = b;
+                } else {
+                    self.ip += 3;
+                }
+
+                Ok(State::Running)
+            }
+            6 => {
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                let b = self.address(instruction.parameter_modes[1], self.ip + 2)? as usize;
+
+                if a == 0 {
+                    self.ip = b;
+                } else {
+                    self.ip += 3;
+                }
+
+                Ok(State::Running)
+            }
+            7 => {
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
+                let c = self.read(self.ip + 3)? as usize;
+                if a < b {
+                    self.write(c, 1)?;
+                } else {
+                    self.write(c, 0)?;
+                }
+
+                self.ip += 4;
+                Ok(State::Running)
+            }
+            8 => {
+                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
+                let c = self.read(self.ip + 3)? as usize;
+                if a == b {
+                    self.write(c, 1)?;
+                } else {
+                    self.write(c, 0)?;
+                }
+
                 self.ip += 4;
                 Ok(State::Running)
             }
@@ -44,7 +144,8 @@ impl Intcode {
         loop {
             let state = self.step()?;
 
-            if matches!(state, State::Terminated) {
+            if !matches!(state, State::Running) {
+                self.state = state;
                 return Ok(());
             }
         }
@@ -92,10 +193,13 @@ impl Intcode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum State {
+    Initial,
     Running,
+    WaitingForInput,
     Terminated,
 }
 
+#[derive(Debug, Clone, Copy)]
 struct Instruction {
     opcode: u8,
     parameter_modes: [AddressingMode; 3],
