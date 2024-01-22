@@ -71,6 +71,12 @@ fn main() -> anyhow::Result<()> {
             measure(puzzle::day03::part1, rounds),
             measure(puzzle::day03::part2, rounds),
         ),
+        Puzzle::new(
+            4,
+            puzzle::day04::INPUT_FILE,
+            measure(puzzle::day04::part1, rounds),
+            measure(puzzle::day04::part2, rounds),
+        ),
     ];
 
     let start = Instant::now();
@@ -169,6 +175,6 @@ fn run_one(
 pub fn trace() {
     tracing_subscriber::registry()
         .with(fmt::layer())
-        .with(EnvFilter::from_env("AOC2023_LOG"))
+        .with(EnvFilter::from_env("AOC_LOG"))
         .init();
 }
