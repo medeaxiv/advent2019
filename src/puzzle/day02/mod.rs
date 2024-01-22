@@ -80,16 +80,18 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    #[fixture]
-    fn input() -> String {
-        std::fs::read_to_string("inputs/day02/test.0.txt").expect("Missing test input")
+    fn input(which: usize) -> String {
+        let file = format!("inputs/day02/test.{}.txt", which);
+        std::fs::read_to_string(file).expect("Missing test input file")
     }
 
     #[rstest]
-    fn test_part1(input: String) {
+    #[case(0, 3500)]
+    fn test_part1(#[case] which: usize, #[case] expected: i64) {
         crate::util::test::setup_tracing();
+        let input = input(which);
         let mut program = parse(&input);
         let result = run(&mut program);
-        assert_eq!(result, 3500);
+        assert_eq!(result, expected);
     }
 }

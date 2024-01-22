@@ -21,20 +21,24 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    #[fixture]
-    fn input() -> String {
-        std::fs::read_to_string("inputs/template/test.0.txt").expect("Missing test input")
+    fn input(which: usize) -> String {
+        let file = format!("inputs/template/test.{}.txt", which);
+        std::fs::read_to_string(file).expect("Missing test input file")
     }
 
     #[rstest]
-    fn test_part1(input: String) {
+    #[case(0, "TODO")]
+    fn test_part1(#[case] which: usize, #[case] expected: &str) {
+        let input = input(which);
         let result = solve_part1(&input);
-        assert_eq!(result, "TODO");
+        assert_eq!(result, expected);
     }
 
     #[rstest]
-    fn test_part2(input: String) {
+    #[case(0, "TODO")]
+    fn test_part2(#[case] which: usize, #[case] expected: &str) {
+        let input = input(which);
         let result = solve_part2(&input);
-        assert_eq!(result, "TODO");
+        assert_eq!(result, expected);
     }
 }
