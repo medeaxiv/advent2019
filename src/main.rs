@@ -3,7 +3,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-use benchmark::RuntimeStats;
 use clap::Parser;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -96,14 +95,20 @@ fn main() -> anyhow::Result<()> {
     let mut report = args.report.as_ref().map(|_| Report::default());
 
     let mut sum_of_medians = Duration::ZERO;
-    let visitor = |puzzle, part, stats: RuntimeStats, result| {
-        println!("Day {puzzle:02} part {part} ({stats}): {result}");
-        sum_of_medians += stats.median();
+    let visitor = |puzzle, part, result: benchmark::Result| {
+        match result {
+            Ok((stats, result)) => {
+                println!("Day {puzzle:02} part {part} ({stats}): {result}");
+                sum_of_medians += stats.median();
 
-        if let Some(report) = report.as_mut() {
-            report.push_entry(puzzle, part, &stats);
+                if let Some(report) = report.as_mut() {
+                    report.push_entry(puzzle, part, &stats);
+                }
+            }
+            Err(err) => {
+                println!("Day {puzzle:02} part {part}: {err}");
+            }
         }
-
         Ok(())
     };
 
@@ -166,7 +171,7 @@ impl From<csv::Error> for Error {
 fn run_all(
     puzzles: &[Puzzle],
     parts: [bool; 2],
-    mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<()>,
+    mut visitor: impl FnMut(u32, u32, benchmark::Result) -> Result<()>,
 ) -> Result<()> {
     for puzzle in puzzles[1..].iter() {
         puzzle.run(parts, &mut visitor)?;
@@ -179,7 +184,7 @@ fn run_one(
     puzzle: u32,
     puzzles: &[Puzzle],
     parts: [bool; 2],
-    visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<()>,
+    visitor: impl FnMut(u32, u32, benchmark::Result) -> Result<()>,
 ) -> Result<()> {
     let puzzle = puzzles
         .get(puzzle as usize)

@@ -1,10 +1,12 @@
 use std::time::{Duration, Instant};
 
+pub type Result = crate::puzzle::Result<(RuntimeStats, String)>;
+
 #[allow(clippy::type_complexity)]
 pub fn measure<R>(
     function: impl Fn(&str) -> crate::puzzle::Result<R> + 'static,
     rounds: u32,
-) -> Box<dyn Fn(&str) -> crate::puzzle::Result<(RuntimeStats, String)>>
+) -> Box<dyn Fn(&str) -> Result>
 where
     R: std::fmt::Display,
 {

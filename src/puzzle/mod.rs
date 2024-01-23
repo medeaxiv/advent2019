@@ -39,18 +39,18 @@ impl Puzzle {
     pub fn run(
         &self,
         parts: [bool; 2],
-        mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> crate::Result<()>,
+        mut visitor: impl FnMut(u32, u32, crate::benchmark::Result) -> crate::Result<()>,
     ) -> crate::Result<()> {
         let input = std::fs::read_to_string(&self.input_file)?;
 
         if parts[0] {
-            let (stats, result) = (*self.p1)(input.as_str())?;
-            visitor(self.puzzle, 1, stats, result)?;
+            let result = (*self.p1)(input.as_str());
+            visitor(self.puzzle, 1, result)?;
         }
 
         if parts[1] {
-            let (stats, result) = (*self.p2)(input.as_str())?;
-            visitor(self.puzzle, 2, stats, result)?;
+            let result = (*self.p2)(input.as_str());
+            visitor(self.puzzle, 2, result)?;
         }
 
         Ok(())
