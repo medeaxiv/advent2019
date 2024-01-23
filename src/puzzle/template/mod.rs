@@ -1,19 +1,21 @@
+use super::{Error, Result};
+
 pub const INPUT_FILE: &str = "inputs/template/input.txt";
 
-pub fn part1(input: &str) -> crate::puzzle::Result<impl std::fmt::Display> {
+pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
     solve_part1(input)
 }
 
-fn solve_part1(_input: &str) -> crate::puzzle::Result<&'static str> {
-    Ok("TODO")
+fn solve_part1(_input: &str) -> Result<&'static str> {
+    Err(Error::NotImplemented)
 }
 
-pub fn part2(input: &str) -> crate::puzzle::Result<impl std::fmt::Display> {
+pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
     solve_part2(input)
 }
 
-fn solve_part2(_input: &str) -> crate::puzzle::Result<&'static str> {
-    Ok("TODO")
+fn solve_part2(_input: &str) -> Result<&'static str> {
+    Err(Error::NotImplemented)
 }
 
 #[cfg(test)]
@@ -28,7 +30,7 @@ mod tests {
 
     #[rstest]
     #[case(0, "TODO")]
-    fn test_part1(#[case] which: usize, #[case] expected: &str) -> crate::puzzle::Result<()> {
+    fn test_part1(#[case] which: usize, #[case] expected: &str) -> Result<()> {
         crate::util::test::setup_tracing();
         let input = input(which);
 
@@ -39,7 +41,7 @@ mod tests {
 
     #[rstest]
     #[case(0, "TODO")]
-    fn test_part2(#[case] which: usize, #[case] expected: &str) -> crate::puzzle::Result<()> {
+    fn test_part2(#[case] which: usize, #[case] expected: &str) -> Result<()> {
         crate::util::test::setup_tracing();
         let input = input(which);
 

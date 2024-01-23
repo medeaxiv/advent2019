@@ -61,6 +61,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("Not implemented")]
+    NotImplemented,
     #[error("{0} error: {1}")]
     String(String, String),
     #[error(transparent)]
