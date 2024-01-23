@@ -18,17 +18,16 @@ pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
 }
 
 fn solve_part1(input: &str) -> Result<i64> {
-    let (a, b) = input
-        .lines()
-        .map(path)
-        .collect_tuple()
-        .ok_or_else(|| Error::input("should have 2 paths"))?;
+    let paths = input.lines().map(path).collect::<Result<Vec<_>>>()?;
+    if paths.len() < 2 {
+        return Err(Error::input("should have 2 paths"));
+    }
 
-    let a_iter = a
+    let a_iter = paths[0]
         .iter()
         .map(|(p, _)| *p)
         .tuple_windows::<(Position, Position)>();
-    let b_iter = b
+    let b_iter = paths[1]
         .iter()
         .map(|(p, _)| *p)
         .tuple_windows::<(Position, Position)>();
@@ -48,14 +47,19 @@ pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
 }
 
 fn solve_part2(input: &str) -> Result<i64> {
-    let (a, b) = input
-        .lines()
-        .map(path)
-        .collect_tuple()
-        .ok_or_else(|| Error::input("should have 2 paths"))?;
+    let paths = input.lines().map(path).collect::<Result<Vec<_>>>()?;
+    if paths.len() < 2 {
+        return Err(Error::input("should have 2 paths"));
+    }
 
-    let a_iter = a.iter().tuple_windows().map(|(a, b)| ((a.0, b.0), a.1));
-    let b_iter = b.iter().tuple_windows().map(|(a, b)| ((a.0, b.0), a.1));
+    let a_iter = paths[0]
+        .iter()
+        .tuple_windows()
+        .map(|(a, b)| ((a.0, b.0), a.1));
+    let b_iter = paths[1]
+        .iter()
+        .tuple_windows()
+        .map(|(a, b)| ((a.0, b.0), a.1));
 
     let result = a_iter
         .cartesian_product(b_iter)
@@ -111,8 +115,8 @@ fn orthogonal_intersection(
     }
 }
 
-fn path(input: &str) -> Vec<(Position, i64)> {
-    let instructions = parser::parse(input).expect("Invalid path declaration");
+fn path(input: &str) -> Result<Vec<(Position, i64)>> {
+    let instructions = parser::parse(input).map_err(Error::from)?;
     let mut path = Vec::with_capacity(instructions.len() + 1);
 
     let mut position = Position::zeros();
@@ -124,7 +128,7 @@ fn path(input: &str) -> Vec<(Position, i64)> {
         path.push((position, distance));
     }
 
-    path
+    Ok(path)
 }
 
 #[cfg(test)]

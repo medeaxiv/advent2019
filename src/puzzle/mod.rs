@@ -83,6 +83,15 @@ impl Error {
     }
 }
 
+impl<T> From<nom::error::Error<T>> for Error
+where
+    T: std::fmt::Display,
+{
+    fn from(value: nom::error::Error<T>) -> Self {
+        ParseError::from(value).into()
+    }
+}
+
 impl From<std::num::ParseIntError> for Error {
     fn from(value: std::num::ParseIntError) -> Self {
         ParseError::from(value).into()
@@ -93,8 +102,17 @@ impl From<std::num::ParseIntError> for Error {
 pub enum ParseError {
     #[error("Parse error: {0}")]
     String(String),
-    #[error("TODO: nom parse error")]
-    Nom(),
+    #[error("{0}")]
+    Nom(String),
     #[error(transparent)]
     Integer(#[from] std::num::ParseIntError),
+}
+
+impl<T> From<nom::error::Error<T>> for ParseError
+where
+    T: std::fmt::Display,
+{
+    fn from(value: nom::error::Error<T>) -> Self {
+        Self::Nom(format!("{}", value))
+    }
 }
