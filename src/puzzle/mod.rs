@@ -11,6 +11,7 @@ pub mod day03;
 pub mod day04;
 pub mod day05;
 pub mod day06;
+pub mod day07;
 
 #[allow(clippy::type_complexity)]
 pub struct Puzzle {
@@ -69,6 +70,8 @@ pub enum Error {
     Intcode(#[from] intcode::Error),
     #[error(transparent)]
     Parse(#[from] ParseError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 impl Error {

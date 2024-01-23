@@ -1,4 +1,8 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, num::ParseIntError};
+
+pub fn parse_program(input: &str) -> core::result::Result<Box<[i64]>, ParseIntError> {
+    input.split(',').map(|s| s.trim().parse::<i64>()).collect()
+}
 
 #[derive(Debug, Clone)]
 pub struct Intcode {
@@ -188,6 +192,10 @@ impl Intcode {
         Ok(())
     }
 
+    pub fn get_state(&self) -> State {
+        self.state
+    }
+
     pub fn get_program(&self) -> &[i64] {
         &self.program
     }
@@ -247,6 +255,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
+    #[error("Intcode error: missing output")]
+    MissingOutput,
     #[error("Intcode error: unknown opcode {opcode:0.2} @ {position}")]
     UnknownOpcode { position: usize, opcode: u8 },
     #[error("Intcode error: invalid parameter mode {parameter} {mode} @ {position}")]
