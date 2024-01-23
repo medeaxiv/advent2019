@@ -29,6 +29,7 @@ mod tests {
     #[rstest]
     #[case(0, "TODO")]
     fn test_part1(#[case] which: usize, #[case] expected: &str) {
+        crate::util::test::setup_tracing();
         let input = input(which);
         let result = solve_part1(&input);
         assert_eq!(result, expected);
@@ -37,6 +38,7 @@ mod tests {
     #[rstest]
     #[case(0, "TODO")]
     fn test_part2(#[case] which: usize, #[case] expected: &str) {
+        crate::util::test::setup_tracing();
         let input = input(which);
         let result = solve_part2(&input);
         assert_eq!(result, expected);

@@ -70,6 +70,7 @@ mod tests {
     #[case(2, 8, 1000)]
     #[case(2, 50, 1001)]
     fn test_part2(#[case] which: usize, #[case] program_input: i64, #[case] expected: i64) {
+        crate::util::test::setup_tracing();
         let input = input(which);
         let program = parse(&input);
 

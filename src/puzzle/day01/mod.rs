@@ -44,6 +44,7 @@ mod tests {
     #[case("1969", 654)]
     #[case("100756", 33583)]
     fn test_part1(#[case] input: &str, #[case] expected: i64) {
+        crate::util::test::setup_tracing();
         let result = solve_part1(input);
         assert_eq!(result, expected);
     }
@@ -54,6 +55,7 @@ mod tests {
     #[case("1969", 966)]
     #[case("100756", 50346)]
     fn test_part2(#[case] input: &str, #[case] expected: i64) {
+        crate::util::test::setup_tracing();
         let result = solve_part2(input);
         assert_eq!(result, expected);
     }
