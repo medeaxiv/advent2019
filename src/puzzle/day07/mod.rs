@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 
 use super::{
     intcode::{self, Intcode},
@@ -16,6 +17,7 @@ fn solve_part1(input: &str) -> Result<i64> {
 
     let result = (0..=4)
         .permutations(5)
+        .par_bridge()
         .flat_map(|phase| amplify_once(0, &phase, &program))
         .max()
         .ok_or_else(|| Error::search("no working phase settings"))?;
@@ -32,6 +34,7 @@ fn solve_part2(input: &str) -> Result<i64> {
 
     let result = (5..=9)
         .permutations(5)
+        .par_bridge()
         .flat_map(|phase| amplify(0, &phase, &program))
         .max()
         .ok_or_else(|| Error::search("no working phase settings"))?;
