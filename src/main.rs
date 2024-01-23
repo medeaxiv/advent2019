@@ -133,17 +133,21 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+pub type Result<T> = core::result::Result<T, Error>;
+
 #[derive(thiserror::Error, Debug)]
-pub enum AocError {
+pub enum Error {
     #[error("No puzzle {puzzle}")]
     NoSuchPuzzle { puzzle: u32 },
+    #[error(transparent)]
+    Puzzle(#[from] puzzle::Error),
     #[error(transparent)]
     Report(csv::Error),
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
 
-impl From<csv::Error> for AocError {
+impl From<csv::Error> for Error {
     fn from(value: csv::Error) -> Self {
         match value.kind() {
             csv::ErrorKind::Io(_) => {
@@ -162,8 +166,8 @@ impl From<csv::Error> for AocError {
 fn run_all(
     puzzles: &[Puzzle],
     parts: [bool; 2],
-    mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<(), AocError>,
-) -> Result<(), AocError> {
+    mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<()>,
+) -> Result<()> {
     for puzzle in puzzles[1..].iter() {
         puzzle.run(parts, &mut visitor)?;
     }
@@ -175,11 +179,11 @@ fn run_one(
     puzzle: u32,
     puzzles: &[Puzzle],
     parts: [bool; 2],
-    visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<(), AocError>,
-) -> Result<(), AocError> {
+    visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<()>,
+) -> Result<()> {
     let puzzle = puzzles
         .get(puzzle as usize)
-        .ok_or(AocError::NoSuchPuzzle { puzzle })?;
+        .ok_or(Error::NoSuchPuzzle { puzzle })?;
 
     puzzle.run(parts, visitor)
 }

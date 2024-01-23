@@ -13,7 +13,7 @@ impl Intcode {
     pub fn run_program_with_inputs(
         program: impl AsRef<[i64]>,
         inputs: impl IntoIterator<Item = i64>,
-    ) -> Result<Vec<i64>, Error> {
+    ) -> Result<Vec<i64>> {
         let mut machine = Self::new(program);
         machine.input_buffer.extend(inputs);
         machine.run()?;
@@ -42,7 +42,7 @@ impl Intcode {
         self.output_buffer.pop_front()
     }
 
-    pub fn step(&mut self) -> Result<State, Error> {
+    pub fn step(&mut self) -> Result<State> {
         let instruction = self.read(self.ip)?;
         let instruction = Instruction::decode(self.ip, instruction)?;
         match instruction.opcode {
@@ -133,14 +133,14 @@ impl Intcode {
                 Ok(State::Running)
             }
             99 => Ok(State::Terminated),
-            opcode => Err(Error::new(ErrorKind::UnknownOpcode {
+            opcode => Err(Error::UnknownOpcode {
                 position: self.ip,
                 opcode,
-            })),
+            }),
         }
     }
 
-    pub fn run(&mut self) -> Result<(), Error> {
+    pub fn run(&mut self) -> Result<()> {
         loop {
             let state = self.step()?;
 
@@ -151,12 +151,12 @@ impl Intcode {
         }
     }
 
-    fn address(&self, mode: AddressingMode, address: usize) -> Result<i64, Error> {
+    fn address(&self, mode: AddressingMode, address: usize) -> Result<i64> {
         if address >= self.program.len() {
-            return Err(Error::new(ErrorKind::IllegalMemoryAccess {
+            return Err(Error::IllegalMemoryAccess {
                 position: self.ip,
                 address,
-            }));
+            });
         }
 
         match mode {
@@ -165,22 +165,24 @@ impl Intcode {
         }
     }
 
-    fn read(&self, address: usize) -> Result<i64, Error> {
-        self.program.get(address).copied().ok_or_else(|| {
-            Error::new(ErrorKind::IllegalMemoryAccess {
+    fn read(&self, address: usize) -> Result<i64> {
+        self.program
+            .get(address)
+            .copied()
+            .ok_or(Error::IllegalMemoryAccess {
                 position: self.ip,
                 address,
             })
-        })
     }
 
-    fn write(&mut self, address: usize, value: i64) -> Result<(), Error> {
-        let memory = self.program.get_mut(address).ok_or_else(|| {
-            Error::new(ErrorKind::IllegalMemoryAccess {
+    fn write(&mut self, address: usize, value: i64) -> Result<()> {
+        let memory = self
+            .program
+            .get_mut(address)
+            .ok_or(Error::IllegalMemoryAccess {
                 position: self.ip,
                 address,
-            })
-        })?;
+            })?;
 
         *memory = value;
         Ok(())
@@ -206,7 +208,7 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn decode(position: usize, instruction: i64) -> Result<Self, Error> {
+    fn decode(position: usize, instruction: i64) -> Result<Self> {
         let opcode = (instruction % 100) as u8;
         let parameter_modes = [
             AddressingMode::decode(position, 0, (instruction / 100 % 10) as u8)?,
@@ -228,75 +230,31 @@ enum AddressingMode {
 }
 
 impl AddressingMode {
-    fn decode(position: usize, parameter: u8, mode: u8) -> Result<Self, Error> {
+    fn decode(position: usize, parameter: u8, mode: u8) -> Result<Self> {
         match mode {
             0 => Ok(Self::Position),
             1 => Ok(Self::Immediate),
-            _ => Err(Error::new(ErrorKind::InvalidParameterMode {
+            _ => Err(Error::InvalidParameterMode {
                 position,
                 parameter,
                 mode,
-            })),
+            }),
         }
     }
 }
 
-#[derive(Debug)]
-pub struct Error(Box<ErrorKind>);
+pub type Result<T> = core::result::Result<T, Error>;
 
-impl Error {
-    pub fn new(kind: ErrorKind) -> Self {
-        Self(Box::new(kind))
-    }
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self.0 {
-            ErrorKind::UnknownOpcode {
-                ref position,
-                ref opcode,
-            } => {
-                write!(f, "Intcode error: unknown opcode {opcode:0.2} @ {position}")
-            }
-            ErrorKind::InvalidParameterMode {
-                ref position,
-                ref parameter,
-                ref mode,
-            } => {
-                write!(
-                    f,
-                    "Intcode error: invalid parameter mode {parameter} {mode} @ {position}"
-                )
-            }
-            ErrorKind::IllegalMemoryAccess {
-                ref position,
-                ref address,
-            } => {
-                write!(
-                    f,
-                    "Intcode error: out of bounds memory access {address} @ {position}"
-                )
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ErrorKind {
-    UnknownOpcode {
-        position: usize,
-        opcode: u8,
-    },
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum Error {
+    #[error("Intcode error: unknown opcode {opcode:0.2} @ {position}")]
+    UnknownOpcode { position: usize, opcode: u8 },
+    #[error("Intcode error: invalid parameter mode {parameter} {mode} @ {position}")]
     InvalidParameterMode {
         position: usize,
         parameter: u8,
         mode: u8,
     },
-    IllegalMemoryAccess {
-        position: usize,
-        address: usize,
-    },
+    #[error("Intcode error: out of bounds memory access {address} @ {position}")]
+    IllegalMemoryAccess { position: usize, address: usize },
 }

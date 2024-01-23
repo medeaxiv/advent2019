@@ -2,18 +2,18 @@ use std::time::{Duration, Instant};
 
 #[allow(clippy::type_complexity)]
 pub fn measure<R>(
-    function: impl Fn(&str) -> R + 'static,
+    function: impl Fn(&str) -> crate::puzzle::Result<R> + 'static,
     rounds: u32,
-) -> Box<dyn Fn(&str) -> (RuntimeStats, String)>
+) -> Box<dyn Fn(&str) -> crate::puzzle::Result<(RuntimeStats, String)>>
 where
     R: std::fmt::Display,
 {
     if rounds <= 1 {
         Box::new(move |input| {
             let start = Instant::now();
-            let result = function(input);
+            let result = function(input)?;
             let duration = start.elapsed();
-            (duration.into(), result.to_string())
+            Ok((duration.into(), result.to_string()))
         })
     } else {
         Box::new(move |input| {
@@ -23,7 +23,7 @@ where
 
             for _ in 0..rounds {
                 let start = Instant::now();
-                let round_result = function(input);
+                let round_result = function(input)?;
                 let duration = start.elapsed();
                 accumulator.push(duration);
 
@@ -32,7 +32,7 @@ where
                 }
             }
 
-            (accumulator.into(), result.unwrap().to_string())
+            Ok((accumulator.into(), result.unwrap().to_string()))
         })
     }
 }

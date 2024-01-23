@@ -3,6 +3,8 @@ use num::Zero;
 
 mod parser;
 
+use super::{Error, Result};
+
 use crate::util::{
     geometry::manhattan_distance,
     numerics::min_max,
@@ -11,16 +13,16 @@ use crate::util::{
 
 pub const INPUT_FILE: &str = "inputs/day03/input.txt";
 
-pub fn part1(input: &str) -> impl std::fmt::Display {
+pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
     solve_part1(input)
 }
 
-fn solve_part1(input: &str) -> i64 {
+fn solve_part1(input: &str) -> Result<i64> {
     let (a, b) = input
         .lines()
         .map(path)
         .collect_tuple()
-        .expect("Input should have 2 paths");
+        .ok_or_else(|| Error::input("should have 2 paths"))?;
 
     let a_iter = a
         .iter()
@@ -31,30 +33,31 @@ fn solve_part1(input: &str) -> i64 {
         .map(|(p, _)| *p)
         .tuple_windows::<(Position, Position)>();
 
-    a_iter
+    let result = a_iter
         .cartesian_product(b_iter)
         .filter_map(|(a, b)| segment_intersection(&a, &b))
         .filter(|intersection| !intersection.is_zero())
         .map(|intersection| manhattan_distance(Position::zeros(), intersection))
         .reduce(i64::min)
-        .expect("No intersection found")
+        .ok_or_else(|| Error::search("no intersection found"))?;
+    Ok(result)
 }
 
-pub fn part2(input: &str) -> impl std::fmt::Display {
+pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
     solve_part2(input)
 }
 
-fn solve_part2(input: &str) -> i64 {
+fn solve_part2(input: &str) -> Result<i64> {
     let (a, b) = input
         .lines()
         .map(path)
         .collect_tuple()
-        .expect("Input should have 2 paths");
+        .ok_or_else(|| Error::input("should have 2 paths"))?;
 
     let a_iter = a.iter().tuple_windows().map(|(a, b)| ((a.0, b.0), a.1));
     let b_iter = b.iter().tuple_windows().map(|(a, b)| ((a.0, b.0), a.1));
 
-    a_iter
+    let result = a_iter
         .cartesian_product(b_iter)
         .filter_map(|((a, a_dist), (b, b_dist))| {
             segment_intersection(&a, &b)
@@ -66,7 +69,8 @@ fn solve_part2(input: &str) -> i64 {
                 })
         })
         .reduce(i64::min)
-        .expect("No intersection found")
+        .ok_or(Error::search("no intersection found"))?;
+    Ok(result)
 }
 
 fn segment_intersection(a: &(Position, Position), b: &(Position, Position)) -> Option<Position> {
@@ -137,21 +141,23 @@ mod tests {
     #[case(0, 159)]
     #[case(1, 135)]
     #[case(2, 6)]
-    fn test_part1(#[case] which: usize, #[case] expected: i64) {
+    fn test_part1(#[case] which: usize, #[case] expected: i64) -> Result<()> {
         crate::util::test::setup_tracing();
         let input = input(which);
-        let result = solve_part1(&input);
+        let result = solve_part1(&input)?;
         assert_eq!(result, expected);
+        Ok(())
     }
 
     #[rstest]
     #[case(0, 610)]
     #[case(1, 410)]
     #[case(2, 30)]
-    fn test_part2(#[case] which: usize, #[case] expected: i64) {
+    fn test_part2(#[case] which: usize, #[case] expected: i64) -> Result<()> {
         crate::util::test::setup_tracing();
         let input = input(which);
-        let result = solve_part2(&input);
+        let result = solve_part2(&input)?;
         assert_eq!(result, expected);
+        Ok(())
     }
 }

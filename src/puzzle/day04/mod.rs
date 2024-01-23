@@ -1,56 +1,63 @@
 use itertools::Itertools;
 
+use super::{Error, Result};
+
 pub const INPUT_FILE: &str = "inputs/day04/input.txt";
 
-pub fn part1(input: &str) -> impl std::fmt::Display {
+pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
     solve_part1(input)
 }
 
-fn solve_part1(input: &str) -> usize {
-    let (start, end) = parse(input);
+fn solve_part1(input: &str) -> Result<usize> {
+    let (start, end) = parse(input)?;
 
     let start_digits = Digits::<6>::from(start);
     let candidate_iter = std::iter::successors(Some(start_digits), |digits| {
         Some(next_candidate_password(*digits))
     });
 
-    candidate_iter
+    let result = candidate_iter
         .filter(has_any_duplicate_pair)
         .take_while(|password| {
             let value = password.as_integer();
             end >= value
         })
-        .count()
+        .count();
+    Ok(result)
 }
 
-pub fn part2(input: &str) -> impl std::fmt::Display {
+pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
     solve_part2(input)
 }
 
-fn solve_part2(input: &str) -> usize {
-    let (start, end) = parse(input);
+fn solve_part2(input: &str) -> Result<usize> {
+    let (start, end) = parse(input)?;
 
     let start_digits = Digits::<6>::from(start);
     let candidate_iter = std::iter::successors(Some(start_digits), |digits| {
         Some(next_candidate_password(*digits))
     });
 
-    candidate_iter
+    let result = candidate_iter
         .filter(has_exact_duplicate_pair)
         .take_while(|password| {
             let value = password.as_integer();
             end >= value
         })
-        .count()
+        .count();
+    Ok(result)
 }
 
-fn parse(input: &str) -> (u64, u64) {
-    let (a, b) = input.trim().split_once('-').expect("Invalid input");
+fn parse(input: &str) -> Result<(u64, u64)> {
+    let (a, b) = input
+        .trim()
+        .split_once('-')
+        .ok_or_else(|| Error::parse("invalid format"))?;
 
-    (
-        a.parse().expect("Invalid input"),
-        b.parse().expect("Invalid input"),
-    )
+    let a = a.parse().map_err(Error::from)?;
+    let b = b.parse().map_err(Error::from)?;
+
+    Ok((a, b))
 }
 
 fn next_candidate_password<const S: usize>(mut digits: Digits<S>) -> Digits<S> {

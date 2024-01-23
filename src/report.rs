@@ -2,7 +2,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::{benchmark::RuntimeStats, AocError};
+use crate::{benchmark::RuntimeStats, Error};
 
 #[derive(Default)]
 pub struct Report {
@@ -22,7 +22,7 @@ impl Report {
         ));
     }
 
-    pub fn save_to(&self, path: impl AsRef<Path>) -> Result<(), AocError> {
+    pub fn save_to(&self, path: impl AsRef<Path>) -> Result<(), Error> {
         let mut writer = csv::Writer::from_path(path)?;
 
         for (puzzle, part, values) in self.entries.iter() {

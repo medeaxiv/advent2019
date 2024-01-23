@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::{benchmark::RuntimeStats, AocError};
+use crate::benchmark::RuntimeStats;
 
 mod intcode;
 pub mod template;
@@ -16,8 +16,8 @@ pub mod day06;
 pub struct Puzzle {
     puzzle: u32,
     input_file: PathBuf,
-    p1: Box<dyn Fn(&str) -> (RuntimeStats, String)>,
-    p2: Box<dyn Fn(&str) -> (RuntimeStats, String)>,
+    p1: Box<dyn Fn(&str) -> Result<(RuntimeStats, String)>>,
+    p2: Box<dyn Fn(&str) -> Result<(RuntimeStats, String)>>,
 }
 
 impl Puzzle {
@@ -25,8 +25,8 @@ impl Puzzle {
     pub fn new(
         id: u32,
         input_file: impl AsRef<Path>,
-        p1: Box<dyn Fn(&str) -> (RuntimeStats, String)>,
-        p2: Box<dyn Fn(&str) -> (RuntimeStats, String)>,
+        p1: Box<dyn Fn(&str) -> Result<(RuntimeStats, String)>>,
+        p2: Box<dyn Fn(&str) -> Result<(RuntimeStats, String)>>,
     ) -> Self {
         Self {
             puzzle: id,
@@ -39,20 +39,62 @@ impl Puzzle {
     pub fn run(
         &self,
         parts: [bool; 2],
-        mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> Result<(), AocError>,
-    ) -> Result<(), AocError> {
+        mut visitor: impl FnMut(u32, u32, RuntimeStats, String) -> crate::Result<()>,
+    ) -> crate::Result<()> {
         let input = std::fs::read_to_string(&self.input_file)?;
 
         if parts[0] {
-            let (stats, result) = (*self.p1)(input.as_str());
+            let (stats, result) = (*self.p1)(input.as_str())?;
             visitor(self.puzzle, 1, stats, result)?;
         }
 
         if parts[1] {
-            let (stats, result) = (*self.p2)(input.as_str());
+            let (stats, result) = (*self.p2)(input.as_str())?;
             visitor(self.puzzle, 2, stats, result)?;
         }
 
         Ok(())
     }
+}
+
+pub type Result<T> = core::result::Result<T, Error>;
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("{0} error: {1}")]
+    String(String, String),
+    #[error(transparent)]
+    Intcode(#[from] intcode::Error),
+    #[error(transparent)]
+    Parse(#[from] ParseError),
+}
+
+impl Error {
+    fn input(message: &str) -> Self {
+        Self::String("Input".to_string(), message.to_string())
+    }
+
+    fn search(message: &str) -> Self {
+        Self::String("Search".to_string(), message.to_string())
+    }
+
+    fn parse(message: &str) -> Self {
+        ParseError::String(message.to_string()).into()
+    }
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(value: std::num::ParseIntError) -> Self {
+        ParseError::from(value).into()
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ParseError {
+    #[error("Parse error: {0}")]
+    String(String),
+    #[error("TODO: nom parse error")]
+    Nom(),
+    #[error(transparent)]
+    Integer(#[from] std::num::ParseIntError),
 }
