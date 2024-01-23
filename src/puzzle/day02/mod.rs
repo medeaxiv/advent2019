@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 
 use super::{
     intcode::{self, Intcode},
@@ -28,13 +29,14 @@ fn solve_part2(input: &str) -> Result<i64> {
 
     let (a, b, _) = (0..=99)
         .cartesian_product(0..=99)
+        .par_bridge()
         .flat_map(|(a, b)| {
             let mut program = original_program.clone();
             program[1] = a;
             program[2] = b;
             run(program).map(|result| (a, b, result))
         })
-        .find(|&(_, _, result)| result == 19690720)
+        .find_any(|&(_, _, result)| result == 19690720)
         .ok_or(Error::search("values not found"))?;
 
     Ok(100 * a + b)
