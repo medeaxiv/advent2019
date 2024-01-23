@@ -136,9 +136,10 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    fn input(which: usize) -> String {
+    fn input(which: usize) -> Result<String> {
         let file = format!("inputs/day03/test.{}.txt", which);
-        std::fs::read_to_string(file).expect("Missing test input file")
+        let file = std::fs::read_to_string(file)?;
+        Ok(file)
     }
 
     #[rstest]
@@ -147,7 +148,7 @@ mod tests {
     #[case(2, 6)]
     fn test_part1(#[case] which: usize, #[case] expected: i64) -> Result<()> {
         crate::util::test::setup_tracing();
-        let input = input(which);
+        let input = input(which)?;
         let result = solve_part1(&input)?;
         assert_eq!(result, expected);
         Ok(())
@@ -159,7 +160,7 @@ mod tests {
     #[case(2, 30)]
     fn test_part2(#[case] which: usize, #[case] expected: i64) -> Result<()> {
         crate::util::test::setup_tracing();
-        let input = input(which);
+        let input = input(which)?;
         let result = solve_part2(&input)?;
         assert_eq!(result, expected);
         Ok(())

@@ -34,9 +34,10 @@ mod tests {
     use super::*;
     use rstest::*;
 
-    fn input(which: usize) -> String {
+    fn input(which: usize) -> Result<String> {
         let file = format!("inputs/day05/test.{}.txt", which);
-        std::fs::read_to_string(file).expect("Missing test input file")
+        let file = std::fs::read_to_string(file)?;
+        Ok(file)
     }
 
     #[rstest]
@@ -53,7 +54,7 @@ mod tests {
         #[case] expected: i64,
     ) -> Result<()> {
         crate::util::test::setup_tracing();
-        let input = input(which);
+        let input = input(which)?;
 
         let program = parse(&input)?;
         let result = Intcode::run_program_with_inputs(program, [program_input])?;
