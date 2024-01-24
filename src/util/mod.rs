@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+pub mod bitmap;
 pub mod cache;
+pub mod display;
 pub mod geometry;
 pub mod graph;
 pub mod grid;
