@@ -55,23 +55,31 @@ impl Intcode {
         let instruction = Instruction::decode(self.instruction_pointer, instruction)?;
         match instruction.opcode {
             1 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
-                let c = self.read(self.instruction_pointer + 3)?;
-                self.write(c, a + b)?;
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let value = a + b;
+                self.address_write(
+                    instruction.parameter_modes[2],
+                    self.instruction_pointer + 3,
+                    value,
+                )?;
 
                 self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             2 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
-                let c = self.read(self.instruction_pointer + 3)?;
-                self.write(c, a * b)?;
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let value = a * b;
+                self.address_write(
+                    instruction.parameter_modes[2],
+                    self.instruction_pointer + 3,
+                    value,
+                )?;
 
                 self.instruction_pointer += 4;
                 Ok(State::Running)
@@ -81,25 +89,28 @@ impl Intcode {
                     return Ok(State::WaitingForInput);
                 };
 
-                let a = self.read(self.instruction_pointer + 1)?;
-                self.write(a, input)?;
+                self.address_write(
+                    instruction.parameter_modes[0],
+                    self.instruction_pointer + 1,
+                    input,
+                )?;
 
                 self.instruction_pointer += 2;
                 Ok(State::Running)
             }
             4 => {
-                let output =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let output = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
                 self.output_buffer.push_back(output);
 
                 self.instruction_pointer += 2;
                 Ok(State::Running)
             }
             5 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
 
                 if a != 0 {
                     self.instruction_pointer = b;
@@ -110,10 +121,10 @@ impl Intcode {
                 Ok(State::Running)
             }
             6 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
 
                 if a == 0 {
                     self.instruction_pointer = b;
@@ -124,38 +135,38 @@ impl Intcode {
                 Ok(State::Running)
             }
             7 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
-                let c = self.read(self.instruction_pointer + 3)?;
-                if a < b {
-                    self.write(c, 1)?;
-                } else {
-                    self.write(c, 0)?;
-                }
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let value = if a < b { 1 } else { 0 };
+                self.address_write(
+                    instruction.parameter_modes[2],
+                    self.instruction_pointer + 3,
+                    value,
+                )?;
 
                 self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             8 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
-                let b =
-                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
-                let c = self.read(self.instruction_pointer + 3)?;
-                if a == b {
-                    self.write(c, 1)?;
-                } else {
-                    self.write(c, 0)?;
-                }
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b = self
+                    .address_read(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let value = if a == b { 1 } else { 0 };
+                self.address_write(
+                    instruction.parameter_modes[2],
+                    self.instruction_pointer + 3,
+                    value,
+                )?;
 
                 self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             9 => {
-                let a =
-                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let a = self
+                    .address_read(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
                 self.relative_base += a;
 
                 self.instruction_pointer += 2;
@@ -180,7 +191,7 @@ impl Intcode {
         }
     }
 
-    fn address(&self, mode: AddressingMode, address: i64) -> Result<i64> {
+    fn get_address(&self, mode: AddressingMode, address: i64) -> Result<i64> {
         if address < 0 {
             return Err(Error::IllegalMemoryAccess {
                 position: self.instruction_pointer,
@@ -189,12 +200,20 @@ impl Intcode {
         }
 
         match mode {
-            AddressingMode::Position => self.read(self.memory.read(address as usize)),
-            AddressingMode::Immediate => Ok(self.memory.read(address as usize)),
-            AddressingMode::Relative => {
-                self.read(self.memory.read(address as usize) + self.relative_base)
-            }
+            AddressingMode::Position => Ok(self.memory.read(address as usize)),
+            AddressingMode::Immediate => Ok(address),
+            AddressingMode::Relative => Ok(self.memory.read(address as usize) + self.relative_base),
         }
+    }
+
+    fn address_read(&self, mode: AddressingMode, address: i64) -> Result<i64> {
+        let address = self.get_address(mode, address)?;
+        self.read(address)
+    }
+
+    fn address_write(&mut self, mode: AddressingMode, address: i64, value: i64) -> Result<()> {
+        let address = self.get_address(mode, address)?;
+        self.write(address, value)
     }
 
     fn read(&self, address: i64) -> Result<i64> {
