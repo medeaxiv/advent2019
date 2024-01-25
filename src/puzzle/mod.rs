@@ -15,6 +15,7 @@ pub mod day07;
 pub mod day08;
 pub mod day09;
 pub mod day10;
+pub mod day11;
 
 #[allow(clippy::type_complexity)]
 pub struct Puzzle {
@@ -78,6 +79,10 @@ pub enum Error {
 }
 
 impl Error {
+    fn execution(message: &str) -> Self {
+        Self::String("Execution".to_string(), message.to_string())
+    }
+
     fn input(message: &str) -> Self {
         Self::String("Input".to_string(), message.to_string())
     }
