@@ -1,5 +1,7 @@
 use std::{collections::VecDeque, num::ParseIntError};
 
+use ahash::AHashMap as HashMap;
+
 pub fn parse_program(input: &str) -> core::result::Result<Box<[i64]>, ParseIntError> {
     input.split(',').map(|s| s.trim().parse::<i64>()).collect()
 }
@@ -7,8 +9,9 @@ pub fn parse_program(input: &str) -> core::result::Result<Box<[i64]>, ParseIntEr
 #[derive(Debug, Clone)]
 pub struct Intcode {
     state: State,
-    ip: usize,
-    program: Box<[i64]>,
+    instruction_pointer: i64,
+    relative_base: i64,
+    memory: Memory,
     input_buffer: VecDeque<i64>,
     output_buffer: VecDeque<i64>,
 }
@@ -29,8 +32,9 @@ impl Intcode {
     pub fn new(program: impl AsRef<[i64]>) -> Self {
         Self {
             state: State::Initial,
-            ip: 0,
-            program: Box::from(program.as_ref()),
+            instruction_pointer: 0,
+            relative_base: 0,
+            memory: Memory::from(program),
             input_buffer: VecDeque::new(),
             output_buffer: VecDeque::new(),
         }
@@ -47,25 +51,29 @@ impl Intcode {
     }
 
     pub fn step(&mut self) -> Result<State> {
-        let instruction = self.read(self.ip)?;
-        let instruction = Instruction::decode(self.ip, instruction)?;
+        let instruction = self.read(self.instruction_pointer)?;
+        let instruction = Instruction::decode(self.instruction_pointer, instruction)?;
         match instruction.opcode {
             1 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
-                let c = self.read(self.ip + 3)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let c = self.read(self.instruction_pointer + 3)?;
                 self.write(c, a + b)?;
 
-                self.ip += 4;
+                self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             2 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
-                let c = self.read(self.ip + 3)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let c = self.read(self.instruction_pointer + 3)?;
                 self.write(c, a * b)?;
 
-                self.ip += 4;
+                self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             3 => {
@@ -73,72 +81,81 @@ impl Intcode {
                     return Ok(State::WaitingForInput);
                 };
 
-                let a = self.read(self.ip + 1)? as usize;
+                let a = self.read(self.instruction_pointer + 1)?;
                 self.write(a, input)?;
 
-                self.ip += 2;
+                self.instruction_pointer += 2;
                 Ok(State::Running)
             }
             4 => {
-                let output = self.address(instruction.parameter_modes[0], self.ip + 1)?;
+                let output =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
                 self.output_buffer.push_back(output);
 
-                self.ip += 2;
+                self.instruction_pointer += 2;
                 Ok(State::Running)
             }
             5 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
 
                 if a != 0 {
-                    self.ip = b;
+                    self.instruction_pointer = b;
                 } else {
-                    self.ip += 3;
+                    self.instruction_pointer += 3;
                 }
 
                 Ok(State::Running)
             }
             6 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
 
                 if a == 0 {
-                    self.ip = b;
+                    self.instruction_pointer = b;
                 } else {
-                    self.ip += 3;
+                    self.instruction_pointer += 3;
                 }
 
                 Ok(State::Running)
             }
             7 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
-                let c = self.read(self.ip + 3)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let c = self.read(self.instruction_pointer + 3)?;
                 if a < b {
                     self.write(c, 1)?;
                 } else {
                     self.write(c, 0)?;
                 }
 
-                self.ip += 4;
+                self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             8 => {
-                let a = self.address(instruction.parameter_modes[0], self.ip + 1)?;
-                let b = self.address(instruction.parameter_modes[1], self.ip + 2)?;
-                let c = self.read(self.ip + 3)? as usize;
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                let b =
+                    self.address(instruction.parameter_modes[1], self.instruction_pointer + 2)?;
+                let c = self.read(self.instruction_pointer + 3)?;
                 if a == b {
                     self.write(c, 1)?;
                 } else {
                     self.write(c, 0)?;
                 }
 
-                self.ip += 4;
+                self.instruction_pointer += 4;
                 Ok(State::Running)
             }
             99 => Ok(State::Terminated),
             opcode => Err(Error::UnknownOpcode {
-                position: self.ip,
+                position: self.instruction_pointer,
                 opcode,
             }),
         }
@@ -155,40 +172,43 @@ impl Intcode {
         }
     }
 
-    fn address(&self, mode: AddressingMode, address: usize) -> Result<i64> {
-        if address >= self.program.len() {
+    fn address(&self, mode: AddressingMode, address: i64) -> Result<i64> {
+        if address < 0 {
             return Err(Error::IllegalMemoryAccess {
-                position: self.ip,
+                position: self.instruction_pointer,
                 address,
             });
         }
 
         match mode {
-            AddressingMode::Position => self.read(self.program[address] as usize),
-            AddressingMode::Immediate => Ok(self.program[address]),
+            AddressingMode::Position => self.read(self.memory.read(address as usize)),
+            AddressingMode::Immediate => Ok(self.memory.read(address as usize)),
+            AddressingMode::Relative => {
+                self.read(self.memory.read(address as usize) + self.relative_base)
+            }
         }
     }
 
-    fn read(&self, address: usize) -> Result<i64> {
-        self.program
-            .get(address)
-            .copied()
-            .ok_or(Error::IllegalMemoryAccess {
-                position: self.ip,
+    fn read(&self, address: i64) -> Result<i64> {
+        if address < 0 {
+            return Err(Error::IllegalMemoryAccess {
+                position: self.instruction_pointer,
                 address,
-            })
+            });
+        }
+
+        Ok(self.memory.read(address as usize))
     }
 
-    fn write(&mut self, address: usize, value: i64) -> Result<()> {
-        let memory = self
-            .program
-            .get_mut(address)
-            .ok_or(Error::IllegalMemoryAccess {
-                position: self.ip,
+    fn write(&mut self, address: i64, value: i64) -> Result<()> {
+        if address < 0 {
+            return Err(Error::IllegalMemoryAccess {
+                position: self.instruction_pointer,
                 address,
-            })?;
+            });
+        }
 
-        *memory = value;
+        self.memory.write(address as usize, value);
         Ok(())
     }
 
@@ -196,8 +216,70 @@ impl Intcode {
         self.state
     }
 
-    pub fn get_program(&self) -> &[i64] {
-        &self.program
+    pub fn get_memory(&self) -> &Memory {
+        &self.memory
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Memory {
+    pages: HashMap<usize, Box<[i64; Self::PAGE_SIZE]>>,
+}
+
+impl Memory {
+    const PAGE_BITS: usize = 8;
+    const PAGE_SIZE: usize = 1 << Self::PAGE_BITS;
+    const PAGE_MASK: usize = usize::MAX >> (usize::BITS as usize - Self::PAGE_BITS);
+
+    pub fn new() -> Self {
+        Self {
+            pages: HashMap::new(),
+        }
+    }
+
+    pub fn from_buffer(buffer: impl AsRef<[i64]>) -> Self {
+        let buffer = buffer.as_ref();
+        let mut pages = HashMap::new();
+
+        for (page_idx, chunk) in buffer.chunks(Self::PAGE_SIZE).enumerate() {
+            let mut page = Self::new_page();
+            page[0..chunk.len()].copy_from_slice(chunk);
+            pages.insert(page_idx, page);
+        }
+
+        Self { pages }
+    }
+
+    fn new_page() -> Box<[i64; Self::PAGE_SIZE]> {
+        Box::new([0; Self::PAGE_SIZE])
+    }
+
+    pub fn read(&self, address: usize) -> i64 {
+        let page_idx = address >> Self::PAGE_BITS;
+        let page_address = address & Self::PAGE_MASK;
+
+        if let Some(page) = self.pages.get(&page_idx) {
+            page[page_address]
+        } else {
+            0
+        }
+    }
+
+    pub fn write(&mut self, address: usize, value: i64) {
+        let page_idx = address >> Self::PAGE_BITS;
+        let page_address = address & Self::PAGE_MASK;
+
+        let page = self.pages.entry(page_idx).or_insert_with(Self::new_page);
+        page[page_address] = value;
+    }
+}
+
+impl<T> From<T> for Memory
+where
+    T: AsRef<[i64]>,
+{
+    fn from(value: T) -> Self {
+        Self::from_buffer(value)
     }
 }
 
@@ -216,7 +298,7 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn decode(position: usize, instruction: i64) -> Result<Self> {
+    fn decode(position: i64, instruction: i64) -> Result<Self> {
         let opcode = (instruction % 100) as u8;
         let parameter_modes = [
             AddressingMode::decode(position, 0, (instruction / 100 % 10) as u8)?,
@@ -235,13 +317,15 @@ impl Instruction {
 enum AddressingMode {
     Position,
     Immediate,
+    Relative,
 }
 
 impl AddressingMode {
-    fn decode(position: usize, parameter: u8, mode: u8) -> Result<Self> {
+    fn decode(position: i64, parameter: u8, mode: u8) -> Result<Self> {
         match mode {
             0 => Ok(Self::Position),
             1 => Ok(Self::Immediate),
+            2 => Ok(Self::Relative),
             _ => Err(Error::InvalidParameterMode {
                 position,
                 parameter,
@@ -258,13 +342,13 @@ pub enum Error {
     #[error("Intcode error: missing output")]
     MissingOutput,
     #[error("Intcode error: unknown opcode {opcode:0.2} @ {position}")]
-    UnknownOpcode { position: usize, opcode: u8 },
+    UnknownOpcode { position: i64, opcode: u8 },
     #[error("Intcode error: invalid parameter mode {parameter} {mode} @ {position}")]
     InvalidParameterMode {
-        position: usize,
+        position: i64,
         parameter: u8,
         mode: u8,
     },
     #[error("Intcode error: out of bounds memory access {address} @ {position}")]
-    IllegalMemoryAccess { position: usize, address: usize },
+    IllegalMemoryAccess { position: i64, address: i64 },
 }

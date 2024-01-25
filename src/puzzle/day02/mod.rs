@@ -52,7 +52,7 @@ fn parse(input: &str) -> Result<Vec<i64>> {
 fn run(program: impl AsRef<[i64]>) -> intcode::Result<i64> {
     let mut machine = Intcode::new(program);
     machine.run()?;
-    Ok(machine.get_program()[0])
+    Ok(machine.get_memory().read(0))
 }
 
 #[cfg(test)]
