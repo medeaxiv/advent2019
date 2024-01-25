@@ -153,6 +153,14 @@ impl Intcode {
                 self.instruction_pointer += 4;
                 Ok(State::Running)
             }
+            9 => {
+                let a =
+                    self.address(instruction.parameter_modes[0], self.instruction_pointer + 1)?;
+                self.relative_base += a;
+
+                self.instruction_pointer += 2;
+                Ok(State::Running)
+            }
             99 => Ok(State::Terminated),
             opcode => Err(Error::UnknownOpcode {
                 position: self.instruction_pointer,
