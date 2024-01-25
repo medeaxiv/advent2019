@@ -13,7 +13,7 @@ pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
 }
 
 fn solve_part1(input: &str) -> Result<i64> {
-    let mut program = parse(input)?;
+    let mut program = intcode::parse_program(input)?;
     program[1] = 12;
     program[2] = 2;
     let result = run(program)?;
@@ -25,7 +25,7 @@ pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
 }
 
 fn solve_part2(input: &str) -> Result<i64> {
-    let original_program = parse(input)?;
+    let original_program = intcode::parse_program(input)?;
 
     let (a, b, _) = (0..=99)
         .cartesian_product(0..=99)
@@ -40,13 +40,6 @@ fn solve_part2(input: &str) -> Result<i64> {
         .ok_or(Error::search("values not found"))?;
 
     Ok(100 * a + b)
-}
-
-fn parse(input: &str) -> Result<Vec<i64>> {
-    input
-        .split(',')
-        .map(|s| s.trim().parse::<i64>().map_err(Error::from))
-        .collect()
 }
 
 fn run(program: impl AsRef<[i64]>) -> intcode::Result<i64> {
@@ -71,7 +64,7 @@ mod tests {
     fn test_part1(#[case] which: usize, #[case] expected: i64) -> Result<()> {
         crate::util::test::setup_tracing();
         let input = input(which)?;
-        let program = parse(&input)?;
+        let program = intcode::parse_program(&input)?;
         let result = run(program)?;
         assert_eq!(result, expected);
         Ok(())

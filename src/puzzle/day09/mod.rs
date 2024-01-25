@@ -3,7 +3,7 @@ use super::{
     Result,
 };
 
-pub const INPUT_FILE: &str = "inputs/day05/input.txt";
+pub const INPUT_FILE: &str = "inputs/day09/input.txt";
 
 pub fn part1(input: &str) -> Result<impl std::fmt::Display> {
     solve_part1(input)
@@ -21,6 +21,6 @@ pub fn part2(input: &str) -> Result<impl std::fmt::Display> {
 
 fn solve_part2(input: &str) -> Result<i64> {
     let program = intcode::parse_program(input)?;
-    let outputs = Intcode::run_program_with_inputs(program, [5])?;
+    let outputs = Intcode::run_program_with_inputs(program, [2])?;
     Ok(outputs[outputs.len() - 1])
 }
