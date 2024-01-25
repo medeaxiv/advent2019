@@ -240,6 +240,7 @@ impl Memory {
     const PAGE_MASK: usize = usize::MAX >> (usize::BITS as usize - Self::PAGE_BITS);
 
     pub fn new() -> Self {
+        #![allow(dead_code)]
         Self {
             pages: HashMap::new(),
         }
@@ -359,4 +360,56 @@ pub enum Error {
     },
     #[error("Intcode error: out of bounds memory access {address} @ {position}")]
     IllegalMemoryAccess { position: i64, address: i64 },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::puzzle::Result;
+    use rstest::*;
+
+    fn input(day: usize, which: usize) -> Result<String> {
+        let file = format!("inputs/day{:02}/test.{}.txt", day, which);
+        let file = std::fs::read_to_string(file)?;
+        Ok(file)
+    }
+
+    #[rstest]
+    #[case(5, 0, [0], 0)]
+    #[case(5, 0, [5], 1)]
+    #[case(5, 1, [0], 0)]
+    #[case(5, 1, [5], 1)]
+    #[case(5, 2, [1], 999)]
+    #[case(5, 2, [8], 1000)]
+    #[case(5, 2, [50], 1001)]
+    #[case(9, 1, [], 1219070632396864)]
+    #[case(9, 2, [], 1125899906842624)]
+    fn test_single_output(
+        #[case] day: usize,
+        #[case] which: usize,
+        #[case] program_input: impl IntoIterator<Item = i64>,
+        #[case] expected: i64,
+    ) -> Result<()> {
+        crate::util::test::setup_tracing();
+        let input = input(day, which)?;
+
+        let program = parse_program(&input)?;
+        let result = Intcode::run_program_with_inputs(program, program_input)?;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], expected);
+        Ok(())
+    }
+
+    #[rstest]
+    fn test_quine() -> Result<()> {
+        crate::util::test::setup_tracing();
+        let input = input(9, 0)?;
+
+        let program = parse_program(&input)?;
+        let result = Intcode::run_program_with_inputs(&program, [])?;
+
+        assert_eq!(program.as_ref(), result.as_slice());
+        Ok(())
+    }
 }
