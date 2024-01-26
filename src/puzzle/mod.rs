@@ -17,6 +17,7 @@ pub mod day09;
 pub mod day10;
 pub mod day11;
 pub mod day12;
+pub mod day13;
 
 #[allow(clippy::type_complexity)]
 pub struct Puzzle {

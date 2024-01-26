@@ -73,12 +73,12 @@ impl Bitmap {
 
 pub trait BitmapDisplay: std::fmt::Display {}
 
-pub struct BoxDisplay(pub Bitmap);
+pub struct BoxFormatter<'a>(pub &'a Bitmap);
 
-impl BoxDisplay {
-    fn get_char(&self, x: i64, y: i64) -> char {
-        let upper = self.0.get(&Position::new(x, y * 2));
-        let lower = self.0.get(&Position::new(x, y * 2 + 1));
+impl<'a> BoxFormatter<'a> {
+    fn get_char(x: i64, y: i64, bitmap: &Bitmap) -> char {
+        let upper = bitmap.get(&Position::new(x, y * 2));
+        let lower = bitmap.get(&Position::new(x, y * 2 + 1));
         match (upper, lower) {
             (true, true) => '\u{2588}',
             (true, false) => '\u{2580}',
@@ -86,17 +86,14 @@ impl BoxDisplay {
             (false, false) => ' ',
         }
     }
-}
 
-impl BitmapDisplay for BoxDisplay {}
-impl std::fmt::Display for BoxDisplay {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let width = self.0.width();
-        let height = (self.0.height() + self.0.height() % 2) / 2;
+    fn format(f: &mut std::fmt::Formatter<'_>, bitmap: &Bitmap) -> std::fmt::Result {
+        let width = bitmap.width();
+        let height = (bitmap.height() + bitmap.height() % 2) / 2;
 
         for y in 0..height {
             for x in 0..width {
-                f.write_char(self.get_char(x, y))?;
+                f.write_char(Self::get_char(x, y, bitmap))?;
             }
 
             if y + 1 < height {
@@ -108,33 +105,44 @@ impl std::fmt::Display for BoxDisplay {
     }
 }
 
-pub struct BrailleDisplay(pub Bitmap);
+impl<'a> std::fmt::Display for BoxFormatter<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Self::format(f, self.0)
+    }
+}
 
-impl BrailleDisplay {
-    fn get_char(&self, x: i64, y: i64) -> char {
-        let pattern = self.0.get_bit(&Position::new(x * 2, y * 4))
-            | self.0.get_bit(&Position::new(x * 2, y * 4 + 1)) << 1
-            | self.0.get_bit(&Position::new(x * 2, y * 4 + 2)) << 2
-            | self.0.get_bit(&Position::new(x * 2 + 1, y * 4)) << 3
-            | self.0.get_bit(&Position::new(x * 2 + 1, y * 4 + 1)) << 4
-            | self.0.get_bit(&Position::new(x * 2 + 1, y * 4 + 2)) << 5
-            | self.0.get_bit(&Position::new(x * 2, y * 4 + 3)) << 6
-            | self.0.get_bit(&Position::new(x * 2 + 1, y * 4 + 3)) << 7;
+pub struct BoxDisplay(pub Bitmap);
+impl BitmapDisplay for BoxDisplay {}
+impl std::fmt::Display for BoxDisplay {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        BoxFormatter::format(f, &self.0)
+    }
+}
+
+pub struct BrailleFormatter<'a>(pub &'a Bitmap);
+
+impl<'a> BrailleFormatter<'a> {
+    fn get_char(x: i64, y: i64, bitmap: &Bitmap) -> char {
+        let pattern = bitmap.get_bit(&Position::new(x * 2, y * 4))
+            | bitmap.get_bit(&Position::new(x * 2, y * 4 + 1)) << 1
+            | bitmap.get_bit(&Position::new(x * 2, y * 4 + 2)) << 2
+            | bitmap.get_bit(&Position::new(x * 2 + 1, y * 4)) << 3
+            | bitmap.get_bit(&Position::new(x * 2 + 1, y * 4 + 1)) << 4
+            | bitmap.get_bit(&Position::new(x * 2 + 1, y * 4 + 2)) << 5
+            | bitmap.get_bit(&Position::new(x * 2, y * 4 + 3)) << 6
+            | bitmap.get_bit(&Position::new(x * 2 + 1, y * 4 + 3)) << 7;
         let codepoint = 0x2800 | pattern as u32;
 
         unsafe { char::from_u32_unchecked(codepoint) }
     }
-}
 
-impl BitmapDisplay for BrailleDisplay {}
-impl std::fmt::Display for BrailleDisplay {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let width = (self.0.width() + self.0.width() % 2) / 2;
-        let height = (self.0.height() + self.0.height() % 4) / 4;
+    fn format(f: &mut std::fmt::Formatter<'_>, bitmap: &Bitmap) -> std::fmt::Result {
+        let width = (bitmap.width() + bitmap.width() % 2) / 2;
+        let height = (bitmap.height() + bitmap.height() % 4) / 4;
 
         for y in 0..height {
             for x in 0..width {
-                f.write_char(self.get_char(x, y))?;
+                f.write_char(Self::get_char(x, y, bitmap))?;
             }
 
             if y + 1 < height {
@@ -143,5 +151,19 @@ impl std::fmt::Display for BrailleDisplay {
         }
 
         Ok(())
+    }
+}
+
+impl<'a> std::fmt::Display for BrailleFormatter<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Self::format(f, self.0)
+    }
+}
+
+pub struct BrailleDisplay(pub Bitmap);
+impl BitmapDisplay for BrailleDisplay {}
+impl std::fmt::Display for BrailleDisplay {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        BrailleFormatter::format(f, &self.0)
     }
 }
