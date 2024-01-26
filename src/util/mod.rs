@@ -14,3 +14,4 @@ pub mod sequence;
 pub mod slice;
 pub mod test;
 pub mod tree;
+pub mod vector;

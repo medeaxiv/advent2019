@@ -1,6 +1,10 @@
-use nalgebra::Vector2;
+use super::vector::{vec2, Vec2};
 
-pub type Position = Vector2<i64>;
+pub type Position = Vec2;
+
+pub fn pos(x: i64, y: i64) -> Position {
+    vec2(x, y)
+}
 
 impl std::ops::AddAssign<Direction> for Position {
     fn add_assign(&mut self, rhs: Direction) {
