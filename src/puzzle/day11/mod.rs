@@ -1,11 +1,10 @@
 use ahash::AHashMap as HashMap;
 use itertools::Itertools;
-use nalgebra::SimdPartialOrd;
 
 use crate::util::{
     bitmap::{Bitmap, BoxDisplay},
     display::OnNewLine,
-    position::{Direction, Position},
+    position::{pos, Direction, Position},
 };
 
 use super::{
@@ -43,7 +42,10 @@ fn solve_part2(input: &str) -> Result<Bitmap> {
         };
 
         white_panels.fold((first, first), |(min, max), next| {
-            (min.simd_min(next), max.simd_max(next))
+            (
+                pos(min.x.min(next.x), min.y.min(next.y)),
+                pos(max.x.max(next.x), max.y.max(next.y)),
+            )
         })
     };
 
@@ -55,7 +57,7 @@ fn solve_part2(input: &str) -> Result<Bitmap> {
         let color = panels.get(&position).copied().unwrap_or(0);
         let position = position - min;
         let value = color != 0;
-        bitmap.put(&position, value)
+        bitmap.put(&position, value);
     }
 
     Ok(bitmap)

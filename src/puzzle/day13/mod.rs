@@ -1,6 +1,5 @@
 use ahash::AHashMap as HashMap;
 use itertools::Itertools;
-use nalgebra::SimdPartialOrd;
 
 use crate::util::{
     bitmap::{Bitmap, BoxFormatter},
@@ -183,7 +182,7 @@ impl Arcade {
                 .screen
                 .keys()
                 .copied()
-                .reduce(|acc, next| acc.simd_max(next))
+                .reduce(|acc, next| vec2(acc.x.max(next.x), acc.y.max(next.y)))
                 .expect("screen is empty")
                 + vec2(1, 1);
             let bitmap = Bitmap::new(resolution.x as u64, resolution.y as u64);
