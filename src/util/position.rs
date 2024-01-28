@@ -118,8 +118,9 @@ impl std::ops::Sub<Movement> for Position {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
+    #[default]
     Up,
     Down,
     Left,
@@ -153,6 +154,13 @@ impl Direction {
             Self::Down => Self::Left,
             Self::Left => Self::Up,
             Self::Right => Self::Down,
+        }
+    }
+
+    pub const fn turn(&self, turn: Turn) -> Self {
+        match turn {
+            Turn::Left => self.turn_left(),
+            Turn::Right => self.turn_right(),
         }
     }
 
@@ -198,4 +206,18 @@ pub struct Movement {
 pub enum Orientation {
     Horizontal,
     Vertical,
+}
+
+impl Orientation {
+    pub const ALL: [Self; 2] = [Self::Horizontal, Self::Vertical];
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Turn {
+    Left,
+    Right,
+}
+
+impl Turn {
+    pub const ALL: [Self; 2] = [Self::Left, Self::Right];
 }

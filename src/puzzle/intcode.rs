@@ -24,7 +24,7 @@ impl Intcode {
         let mut machine = Self::new(program);
         machine.input_buffer.extend(inputs);
         machine.run()?;
-        Ok(Vec::from_iter(machine.output_buffer.drain(..)))
+        Ok(machine.drain_output())
     }
 }
 
@@ -45,9 +45,20 @@ impl Intcode {
         self.input_buffer.push_back(input);
     }
 
+    pub fn push_text_input(&mut self, input: impl AsRef<str>) {
+        #![allow(dead_code)]
+        for input in input.as_ref().chars().map(|c| c as i64) {
+            self.push_input(input);
+        }
+    }
+
     pub fn pop_output(&mut self) -> Option<i64> {
         #![allow(dead_code)]
         self.output_buffer.pop_front()
+    }
+
+    pub fn drain_output(&mut self) -> Vec<i64> {
+        Vec::from_iter(self.output_buffer.drain(..))
     }
 
     pub fn step(&mut self) -> Result<State> {
